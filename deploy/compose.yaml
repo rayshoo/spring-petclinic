@@ -1,0 +1,6 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}

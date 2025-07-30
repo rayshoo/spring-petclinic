@@ -1,0 +1,26 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/petclinic
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Docker hub login
+      uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Build container image and push
+      uses: docker/setup-compose-action@v1.2.0
+      env:
+        IMAGE_TAG: '${{ github.sha:0:7 }}'
+      run: docker-compose -f deploy/compose.yaml build --push
