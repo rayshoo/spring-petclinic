@@ -13,14 +13,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    # CI
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set outputs
+    - name: Get commit short sha
       id: vars
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Check outputs
+    - name: Check commit short sha
       run: echo ${{ steps.vars.outputs.sha_short }}
 
     - name: Docker hub login
@@ -34,3 +35,36 @@ jobs:
       env:
         IMAGE_TAG: '${{ steps.vars.outputs.sha_short }}'
       run: docker compose -f deploy/compose.yaml build --push
+
+    - name: Get commit message
+      id: commitmsg
+      # run: |
+      #   echo "message<<EOF" >> $GITHUB_OUTPUT
+      #   git log -1 --pretty=%B >> $GITHUB_OUTPUT
+      #   echo "EOF" >> $GITHUB_OUTPUT
+      run: |
+        {
+          echo 'message<<EOF'
+          git log -1 --pretty=%B
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
+
+    # CD
+    - name: Clone target repo
+      run: |
+        git clone https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/rayshoo/docker-deploy.git deploy-repo
+
+    - name: Update image tag
+      working-directory: deploy-repo
+      run: |
+        sed -i "s|image: ${{ env.IMAGE_NAME }}:.*|image: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.sha_short }}|" petclinic/compose.yaml
+    
+    - name: Commit and push changes
+      working-directory: deploy-repo
+      run: |
+        git config user.name "${{ github.actor }}"
+        git config user.email "${{ github.actor }}@users.noreply.github.com"
+    
+        git add .
+        git commit -m "${{ steps.commitmsg.outputs.message }}"
+        git push origin master
