@@ -13,6 +13,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: Set outputs
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+    - name: Check outputs
+      run: echo ${{ steps.vars.outputs.sha_short }}
+
     - name: Docker hub login
       uses: docker/login-action@v3
       with:
@@ -22,5 +29,5 @@ jobs:
     - uses: docker/setup-compose-action@v1.2.0
     - name: Build container image and push
       env:
-        IMAGE_TAG: '${{ github.sha:0:7 }}'
+        IMAGE_TAG: '${{ steps.vars.outputs.sha_short }}'
       run: docker-compose -f deploy/compose.yaml build --push
